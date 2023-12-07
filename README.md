@@ -123,13 +123,13 @@ Here's an example of smsTables.json (in French):
 		"class_show":{"mapping":["cde_show"]}
 	},
 	"deviceClasses": {
-		"chaleur":{"deviceClass":"class_set","values":{"chaud":10,"froid":20,"déshumidification":30}},
+		"chaleur":{"deviceClass":"class_set","setType":"level","values":{"chaud":10,"froid":20,"déshumidification":30}},
 		"clim":{"deviceClass":"class_on_off"},
-		"consigne":{"deviceClass":"class_set"},
+		"consigne":{"deviceClass":"class_set","setType":"setPoint","minValue":6,"maxValue":25},
 		"contact":{"deviceClass":"class_show"},
 		"lampe":{"deviceClass":"class_on_off"},
-		"radiateur":{"deviceClass":"class_set","values":{"off":0,"confort":10,"eco":40,"horsgel":50}},
-		"température":{"deviceClass":"class_show"},
+		"radiateur":{"deviceClass":"class_set","setType":"level","values":{"off":0,"confort":10,"eco":40,"horsgel":50}},
+		"température":{"deviceClass":"class_show"}
 	},
 	"devices": {
 		"clim chambre sud":{"index":12,"name":"Clim chambre Sud - Power"},
