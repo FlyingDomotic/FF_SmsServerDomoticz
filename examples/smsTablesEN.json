@@ -1,0 +1,51 @@
+{
+	"settings": {
+		"classAfterDevice": true
+	},
+	"ignores": [
+		"of",
+		"the",
+		"=",
+		"to"
+	],
+	"commandValues": {
+		"cdeOn":{"codeValue":1},
+		"cdeOff":{"codeValue":2},
+		"cdeShow":{"codeValue":4},
+		"cdeSet":{"codeValue":8,"set":true}
+	},
+	"commandClasses": {
+		"classOnOff":{"commandValue":["cdeOn","cdeOff","cdeShow"]},
+		"classSet":{"commandValue":["cdeSet","cdeShow"]},
+		"classShow":{"commandValue":["cdeShow"]}
+	},
+	"commands": {
+		"turn":{"commandValue":"cdeSet"},
+		"arm":{"commandValue":"cdeOn"},
+		"open":{"commandValue":"cdeOn"},
+		"disarm":{"commandValue":"cdeOff"},
+		"close":{"commandValue":"cdeOff"},
+		"state":{"commandValue":"cdeShow"},
+		"display":{"commandValue":"cdeShow"},
+		"set":{"commandValue":"cdeSet"},
+		"define":{"commandValue":"cdeSet"}
+	},
+	"deviceClasses": {
+		"heating":{"commandClass":"classSet","setType":"level","mapping":{"warm":10,"cold":20,"dehumidification":30}},
+		"ac":{"commandClass":"classOnOff"},
+		"reference":{"commandClass":"classSet","setType":"setPoint","minValue":6,"maxValue":25},
+		"contact":{"commandClass":"classShow"},
+		"light":{"commandClass":"classSet","setType":"level","mapping":{"off":0,"on":100}},
+		"radiator":{"commandClass":"classSet","setType":"level","mapping":{"off":0,"comfort":10,"eco":40,"nofrost":50}},
+		"temperature":{"commandClass":"classShow"}
+	},
+	"devices": {
+		"south bedroom ac":{"index":12,"name":"South bedroom air conditioning - Power"},
+		"south bedroom heating":{"index":23,"name":"South bedroom air conditioning - Mode"},
+		"south bedroom reference":{"index":34,"name":"South bedroom air conditioning - SetPoint"},
+		"kitchen light":{"index":45,"name":"Kitchen"},
+		"living room temperature":{"index":56,"name":"Living temperature"},
+		"north bathroom radiator":{"index":67,"name":"North bedroom radiator mode"},
+		"main door contact":{"index":78,"name":"Main door contact"}
+	}
+}

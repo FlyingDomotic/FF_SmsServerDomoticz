@@ -1,5 +1,6 @@
 #!/usr/bin/python3
-fileVersion = "1.0.0"                                       # File version
+fileVersion = "1.1.0"                                       # File version
+
 import pathlib
 import os
 from FF_analyzeCommand import FF_analyzeCommand

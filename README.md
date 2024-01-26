@@ -1,19 +1,34 @@
-# FF_SmsServer interface to Domoticz
+# FF_SmsServer interface to Domoticz/Interface FF_SmsServer pour Domoticz
+(English and French version in same file/Versions anglaises et françaises dans le même fichier)
+
 Allow users to send SMS containing commands to be executer on Domoticz.
 
-## What's for?
+Execute des commandes envoyées par SMS à Domoticz
+
+## What's for?/A quoi ça sert ?
 
 This python code reads all SMS received by a (FF) SMS server. If first command's word is equal to a given prefix, rest of command is analyzed as a valid command. Errors during analysis are returned as SMS to command's sender. If no errors, command is sent to Domoticz and result sent back to sender, still by SMS.
+
+Ce code python lit les SMS reçus par un serveur (FF) SMS. Si le premier mot de la commande est égal à un prefixe donné, le reste de la commande est analysée. Les erreurs sont renvoyées à l'expéditeur par SMS. Si la commande est ccorecte, elle est envoyée à Domoticz, et le résultat est retourné à l'expéditeur, toujours par SMS.
 
 ## Note
 There are 2 versions of this code:
 - https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git (this code), which is a Linux service implementation
 - https://github.com/FlyingDomotic/domoticz-ff_smsserver-plugin.git, which runs as Domoticz's plug-in
 
-You may chosse version best suited for you.
-## Prerequisites
+You may choose version best suited for you.
+
+Il y a 2 versions de ce code :
+- https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git (ce code), implémenté sous forme de service Linux
+- https://github.com/FlyingDomotic/domoticz-ff_smsserver-plugin.git, qui tourne en tant que plugin Domoticz
+
+Chosissez la version qui vous va le mieux.
+
+## Prerequisites/Prérequis
 
 You must have a (FF) SMS server (https://github.com/FlyingDomotic/FF_SmsServer.git) properly configured and running somewhere on your network.
+
+Vous devez avoir un serveur (FF) SMS (https://github.com/FlyingDomotic/FF_SmsServer.git) correctement configuré et tournant quelque part dans votre réseau.
 
 ## Installation
 
@@ -23,7 +38,13 @@ cd [where_you_want_to_install_it]
 git clone https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git FF_SmsServerDomoticz
 ```
 
-## Update
+Clonez le code quelque part sur votre disque.
+```
+cd [là_ou_vous_voulez_l'installer]
+git clone https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git FF_SmsServerDomoticz
+```
+
+## Update/Mise à jour
 
 Go to code folder and pull new version:
 ```
@@ -40,24 +61,36 @@ or
 git checkout [modified file]
 ```
 
-## Principle
+Allez dans le répertoire où vous avez installé le code et mettez-le à jour :
+```
+cd [là_où_vous_avez_installé_FF_SmsServerDomoticz]
+git pull
+```
 
-Code was originally designed to get (French) SMS messages to remotely manage automation system.
+Note: si vous avez modifié des fichiers et que la commande `git pull` ne fonctionne pas, vous pouvez anuler les changements par :
+```
+git stash
+```
+ou
+```
+git checkout [fichier modifié]
+```
 
-General command organization is: [command] [device type] [device name] [value to set].
+## Principle/Principe
 
-For example: `allume la lampe de la cuisine`, `ouvre le volet du salon`, `règle la consigne de la clim du séjour sur 21`, ...
+General command organization is: [prefix] [command] [device name] [device type] [value to set].
 
-Again, this structure is French oriented, and should be adapted to other languages/grammar if needed.
+For example: "domoticz turn kitchen light on", "domoticz open living room shutter", "domoticz set living room air conditioning to 21", ...
 
-For example, to turn a bulb on, French is `Allume lampe cuisine`, word to word translated into `turn on bulb kitchen`,
-while English people would better say `turn kitchen bulb on`.
+Code allows to work with UTF-8 data. You may optionally restrict comparison and/or output to 7 bits ASCII equivalent to help processing, allowing to remove accentuated characters (even if useful for 
 
-A future version could implement different grammars, users' requests may speed-up the process ;-)
+La structure de la commande est : [command] [device type] [device name] [value to set].
 
-Code allows to work with UTF-8 data. You may optionally restrict comparison and output to 7 bits ASCII equivalent to help processing, allowing to remove accentuated characters.
+Par exemple : `domotique allume la lampe de la cuisine`, `domotique ouvre le volet du salon`, `domotique règle la consigne de la clim du séjour sur 21`, ...
 
-## Files
+Le code utilise du texte codé en UTF-8. Vous pouvez restreindre la comparaison et/ou l'affichage en mode 7 bits ASCII, ce qui éliminera les caractères accentués.
+
+## Files/Fichiers
 - smsTables.json: configuration file describing devices, classes and commands.
 - FF_analyzeCommand.py: contains common code used to parse smsTables.json, and parse SMS commands against them.
 - checkJsonFiles.py: check syntax and relationships of smsTables.json and allows you to test legality of commands (without executing them).
@@ -65,26 +98,111 @@ Code allows to work with UTF-8 data. You may optionally restrict comparison and 
 - domoticzSms.py: reads SMS message, check for prefix, parse command and execute it if legal.
 - domoticsSsm.service: service configuration file to run domoticzSms.py as service.
 
-## smsTables.json content
+- smsTables.json: fichier de configuration décrivant les dispositifs, classes et commandes.
+- FF_analyzeCommand.py: contient le code utilisé pour lire smsTables.json, et vérifier/décoder les commandes SMS.
+- checkJsonFiles.py: vérifie la syntaxe et les relations du fichier smsTables.json. Permet aussi de vérifier le format des commandes (sans les exécuter).
+- makeDoc.py: génére une liste des commandes supportées par votre configuration.
+- domoticzSms.py: lit les SMS, vérifie le préfixe, analyse la commande et l'exécute si elle est correcte.
+- domoticsSsm.service: fichier de configuration pour lancer domoticzSms.py en tant que service.
+
+## smsTables.json content/Contenu du fichier smsTables.json
 
 This json configuration file contains the following parts (in any order):
 
+- "settings": contains settings parameters. `"classAfterDevice": true` indicates that class is given after device, as with English language.
 - "ignores": contains keywords to be ignored (like `the`, `of`, `to`...). All these keywords will be removed from message before parsing.
-- "mappingValues": contains binary values of the different commands. Typical implementation could be like:
-	- "cde_off":{"mappingValue":2}, to turn a device off.
-	- "cde_set":{"mappingValue":8,"set":true}, to set a device to any numerical or string value.
-	- "cde_show":{"mappingValue":4}, to show current value of a device.
-- "commands": contains the commands to implement. Same action can be supported by multiple values (i.e. `turn_on`, `switch_on`, `light`, `open` to set a device on). `Commands` maps to `mappingValues`.
-- "mappings": define classes and maps them to `mappingValues`. Typical implementation could be like:
-	- "class_on_off":{"mapping":["cde_on","cde_off","cde_show"]} for any on/off device.
-	- "class_set":{"mapping":["cde_set","cde_show"]} for any device with specific value.
-	- "class_show":{"mapping":["cde_show"]} for all devices you won't change value.
-- "deviceClasses": associate device classes with classes.
-- "devices": define supported Domoticz devices (not necessarily with their real names). As a device could have multiple sensors, they're prefixed by a device class. It also specify Domoticz idx. It could contain Domoticz device name (useful to compare given device name with Domoticz one).
+- "commandValues": contains binary values of the different commands. Typical implementation could be like:
+	- "cdeOff":{"codeValue":2}, to turn a device off,
+	- "cdeSet":{"codeValue":8,"set":true}, to set a device to any numerical or string value,
+	- "cdeShow":{"codeValue":4}, to show current value of a device.
+- "commandClasses": define classes and maps them to `commandValues`. Typical implementation could be like:
+	- "classOnOff":{"commandValue":["cdeOn","cdeOff","cdeShow"]} for any on/off device,
+	- "classSet":{"commandValue":["cdeSet","cdeShow"]}  for any device with value to be set,
+	- "classShow":{"commandValue":["cdeShow"]}  for all devices you won't change value.
 
-Here's an example of smsTables.json (in French):
+- "commands": contains the commands to implement. Same action can be supported by multiple values (i.e. `light`, `open` to set a device on). `Commands` maps to `mappingValues`.
+- "deviceClasses": associate device classes with classes.
+- "devices": define supported Domoticz devices (not necessarily with their real names). As a device could have multiple sensors, they're postfixed by a device class. It also specify Domoticz idx. It could contain Domoticz device name (useful to compare given device name with Domoticz one).
+
+Here's an example of smsTables.json (English version):
 ```
 {
+	"settings": {
+		"classAfterDevice": true
+	},
+	"ignores": [
+		"of",
+		"the",
+		"=",
+		"to"
+	],
+	"commandValues": {
+		"cdeOn":{"codeValue":1},
+		"cdeOff":{"codeValue":2},
+		"cdeShow":{"codeValue":4},
+		"cdeSet":{"codeValue":8,"set":true}
+	},
+	"commandClasses": {
+		"classOnOff":{"commandValue":["cdeOn","cdeOff","cdeShow"]},
+		"classSet":{"commandValue":["cdeSet","cdeShow"]},
+		"classShow":{"commandValue":["cdeShow"]}
+	},
+	"commands": {
+		"turn":{"commandValue":"cdeSet"},
+		"arm":{"commandValue":"cdeOn"},
+		"open":{"commandValue":"cdeOn"},
+		"disarm":{"commandValue":"cdeOff"},
+		"close":{"commandValue":"cdeOff"},
+		"state":{"commandValue":"cdeShow"},
+		"display":{"commandValue":"cdeShow"},
+		"set":{"commandValue":"cdeSet"},
+		"define":{"commandValue":"cdeSet"}
+	},
+	"deviceClasses": {
+		"heating":{"commandClass":"classSet","setType":"level","mapping":{"warm":10,"cold":20,"dehumidification":30}},
+		"ac":{"commandClass":"classOnOff"},
+		"reference":{"commandClass":"classSet","setType":"setPoint","minValue":6,"maxValue":25},
+		"contact":{"commandClass":"classShow"},
+		"light":{"commandClass":"classSet","setType":"level","mapping":{"off":0,"on":100}},
+		"radiator":{"commandClass":"classSet","setType":"level","mapping":{"off":0,"comfort":10,"eco":40,"nofrost":50}},
+		"temperature":{"commandClass":"classShow"}
+	},
+	"devices": {
+		"south bedroom ac":{"index":12,"name":"South bedroom air conditioning - Power"},
+		"south bedroom heating":{"index":23,"name":"South bedroom air conditioning - Mode"},
+		"south bedroom reference":{"index":34,"name":"South bedroom air conditioning - SetPoint"},
+		"kitchen light":{"index":45,"name":"Kitchen"},
+		"living room temperature":{"index":56,"name":"Living temperature"},
+		"north bathroom radiator":{"index":67,"name":"North bedroom radiator mode"},
+		"main door contact":{"index":78,"name":"Main door contact"}
+	}
+}
+```
+
+Le fichier de configuration json contient les éléments suivants (dans n'importe quel ordre) :
+
+- "settings": contient les paramètres de configuration. `"classAfterDevice": false` indique que la classe est données avant le nom du dispositif (comme en français),
+- "ignores": contient les mots clef à ignorer (comme `le`, `la`, `de`...). Tous ces mots clef seront supprimés du message avant traitement,
+- "commandValues": contient les valeurs binaires des différentes commandes. Par exemple :
+	- "cdeOff":{"codeValue":2}, pour éteindre un dispositif,
+	- "cdeSet":{"codeValue":8,"set":true}, pour définir une valeur numérique ou chaine sur un dispositif,
+	- "cdeShow":{"codeValue":4}, pour afficher la valeur associée à un dispositif,
+- "commandClasses": definit les classes et les associe aux `commandValues`. Par exemple :
+	- "classOnOff":{"commandValue":["cdeOn","cdeOff","cdeShow"]} pour des dispositifs on/off,
+	- "classSet":{"commandValue":["cdeSet","cdeShow"]} pour des dispositifs dont on souhaite régler la valeur,
+	- "classShow":{"commandValue":["cdeShow"]} pour les dispositifs dont on ne veut pas changer la valeur.
+
+- "commands": contient les commandes à implementer. La même action peut être définie de plusieurs façons (par exemple `allume`, `ouvre` pour mettre un dispositif sur on). `Commands` pointe vers `mappingValues`.
+- "deviceClasses": associe les classes de dispositifs avec les classes,
+- "devices": definit les dispositifs Domoticz utilisés (pas forcement sous leur nom original). Comme un dispositif peut avoir plusieurs capteurs, ils sont préfixés par la classe du dispositif. Contient également l'idx Domoticz. Il peut également contenir le nom oroginal Domoticz, pour aider aux recoupements.
+
+Voici un exemple de fichier smsTables.json (version française) :
+
+```
+{
+	"settings": {
+		"classAfterDevice": false
+	},
 	"ignores": [
 		"de",
 		"du",
@@ -99,37 +217,37 @@ Here's an example of smsTables.json (in French):
 		"=",
 		"sur"
 	],
-	"mappingValues": {
-		"cde_on":{"mappingValue":1},
-		"cde_off":{"mappingValue":2},
-		"cde_show":{"mappingValue":4},
-		"cde_set":{"mappingValue":8,"set":true}
+	"commandValues": {
+		"cdeOn":{"codeValue":1},
+		"cdeOff":{"codeValue":2},
+		"cdeShow":{"codeValue":4},
+		"cdeSet":{"codeValue":8,"set":true}
+	},
+	"commandClasses": {
+		"classOnOff":{"commandValue":["cdeOn","cdeOff","cdeShow"]},
+		"classSet":{"commandValue":["cdeSet","cdeShow"]},
+		"classShow":{"commandValue":["cdeShow"]}
 	},
 	"commands": {
-		"allume":{"command":"cde_on"},
-		"arme":{"command":"cde_on"},
-		"ouvre":{"command":"cde_on"},
-		"éteins":{"command":"cde_off"},
-		"désarme":{"command":"cde_off"},
-		"ferme":{"command":"cde_off"},
-		"état":{"command":"cde_show"},
-		"affiche":{"command":"cde_show"},
-		"règle":{"command":"cde_set"},
-		"définis":{"command":"cde_set"}
-	},
-	"mappings": {
-		"class_on_off":{"mapping":["cde_on","cde_off","cde_show"]},
-		"class_set":{"mapping":["cde_set","cde_show"]},
-		"class_show":{"mapping":["cde_show"]}
+		"allume":{"commandValue":"cdeOn"},
+		"arme":{"commandValue":"cdeOn"},
+		"ouvre":{"commandValue":"cdeOn"},
+		"éteins":{"commandValue":"cdeOff"},
+		"désarme":{"commandValue":"cdeOff"},
+		"ferme":{"commandValue":"cdeOff"},
+		"état":{"commandValue":"cdeShow"},
+		"affiche":{"commandValue":"cdeShow"},
+		"règle":{"commandValue":"cdeSet"},
+		"définis":{"commandValue":"cdeSet"}
 	},
 	"deviceClasses": {
-		"chaleur":{"deviceClass":"class_set","setType":"level","values":{"chaud":10,"froid":20,"déshumidification":30}},
-		"clim":{"deviceClass":"class_on_off"},
-		"consigne":{"deviceClass":"class_set","setType":"setPoint","minValue":6,"maxValue":25},
-		"contact":{"deviceClass":"class_show"},
-		"lampe":{"deviceClass":"class_on_off"},
-		"radiateur":{"deviceClass":"class_set","setType":"level","values":{"off":0,"confort":10,"eco":40,"horsgel":50}},
-		"température":{"deviceClass":"class_show"}
+		"chaleur":{"commandClass":"classSet","setType":"level","mapping":{"chaud":10,"froid":20,"déshumidification":30}},
+		"clim":{"commandClass":"classOnOff"},
+		"consigne":{"commandClass":"classSet","setType":"setPoint","minValue":6,"maxValue":25},
+		"contact":{"commandClass":"classShow"},
+		"lampe":{"commandClass":"classOnOff"},
+		"radiateur":{"commandClass":"classSet","setType":"level","mapping":{"off":0,"confort":10,"eco":40,"horsgel":50}},
+		"température":{"commandClass":"classShow"}
 	},
 	"devices": {
 		"clim chambre sud":{"index":12,"name":"Clim chambre Sud - Power"},
@@ -143,9 +261,20 @@ Here's an example of smsTables.json (in French):
 }
 ```
 
-## How to get list of commands supported by your implementation?
+## How to get list of commands supported by your implementation?/Comment obtenir une liste des commandes ?
 
 Just run `makeDoc.py` and have a look at `config.txt` it'll generate. Here's an example of the configuration listed in the previous paragraph. First column is Domoticz device name while second one list all commands available for the device:
+```
+South bedroom air conditioning - Power	arm/open/disarm/close/state/display south bedroom ac
+South bedroom air conditioning - Mode	turn/state/display/set/define south bedroom heating [warm/cold/dehumidification]
+South bedroom air conditioning - SetPoint	turn/state/display/set/define south bedroom reference
+Kitchen	turn/state/display/set/define kitchen light [off/on]
+Living temperature	state/display living room temperature
+North bedroom radiator mode	turn/state/display/set/define north bathroom radiator [off/comfort/eco/nofrost]
+Main door contact	state/display main door contact
+```
+Lancer simplement `makeDoc.py` pour générer un fichier `config.txt`. Voici un exemple à partir de la configuration donnée dans le paragraphe précédent. La première colonne indique le nom du dispositif Domoticz, la seconde la liste de toutes les commandes disponibles pour le dispositif :
+
 ```
 Clim chambre Sud - Power	allume/arme/ouvre/éteins/désarme/ferme/état/affiche clim chambre sud
 Clim chambre Sud - Mode	état/affiche/règle/définis chaleur chambre sud [chaud/froid/déshumidification]
@@ -156,13 +285,24 @@ Mode radiateur SdB nord	état/affiche/règle/définis radiateur SdB nord [off/co
 Contact porte entrée	état/affiche contact porte entrée
 ```
 
-## How to install domoticzSms.service
+## How to install domoticzSms.service?/Comment installer le service domoticzSms?
 - cd [where you installed FF_SmsServerDomoticz]
 - chmod +x *.py
 - nano domoticzSms.service
-	- locate `User=` line and replace `pi` by user you want to run domoticzSms.service
+	- locate `User=` line and replace `pi` by user you want to run domoticzSms.service (if not `pi`)
 	- locate `ExecStart=` line and replace `/home/pi` by location where you installed domoticzSms.service
 	- save modified file
+- sudo mv domoticzSms.service /lib/systemd/system/
+- sudo chmod 644 /lib/systemd/system/domoticzSms.service
+- sudo systemctl enable domoticzSms.service
+- sudo systemctl start domoticzSms.service
+
+- cd [là où vous avez installé FF_SmsServerDomoticz]
+- chmod +x *.py
+- nano domoticzSms.service
+	- trouvez la ligne `User=` line et replacer `pi` par l'utilisateur qui doit faire tourner le service domoticzSms.service (si différent),
+	- trouvez la ligne `ExecStart=` et remplacer `/home/pi` par le répertoire où vous avez installé domoticzSms.service (si différent),
+	- sauvegarder le fichier modifié.
 - sudo mv domoticzSms.service /lib/systemd/system/
 - sudo chmod 644 /lib/systemd/system/domoticzSms.service
 - sudo systemctl enable domoticzSms.service

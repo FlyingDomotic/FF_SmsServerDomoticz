@@ -1,16 +1,15 @@
 """
 This code analyzes a command and tries to decode a command against a given list.
 
-It was originally designed to get (French) SMS messages to remotely manage automation system.
+It is both adapted to get French or English SMS messages to remotely manage automation system.
 
-General command organization is: [command] [device type] [device name] [value to set].
+General command organization is:
+    For French: [command] [device type] [device name] [value to set].
+    For English: [command] [device name] [device type] [value to set].
 
-For example: "allume la lampe de la cuisine", "ouvre le volet du salon", "règle la consigne de la clim du séjour sur 21", ...
-
-Again, this structure is French oriented, and should be adapted to other languages/grammar if needed.
-For example, to turn a bulb on, French is "Allume lampe cuisine", word to word translated into "turn on bulb kitchen",
-while English people would better say "turn kitchen bulb on".
-A new version could implement different grammars, users' requests may speed-up the process ;-)
+For example:
+    For French:  "allume la lampe de la cuisine", "ouvre le volet du salon", "règle la consigne de la clim du séjour sur 21", ...
+    For English: "turn kitchen light on", "open living room shutter", "set living room air conditioning to 21", ...
 
 Code allows to work with UTF-8 data. You may optionally restrict comparison and output to 7 bits ASCII equivalent to help processing.
 
@@ -30,7 +29,7 @@ import unidecode
 class FF_analyzeCommand:
     # Class initialization 
     def __init__(self):
-        self.fileVersion = "1.0.2"                          # File version
+        self.fileVersion = "1.1.0"                          # File version
         self.errorSeen = False;                             # Do we seen an error ?
         self.convertUtf8ToAscii7Input = True;               # Convert input to Ascii7?
         self.convertUtf8ToAscii7Output = False;             # Convert saved output to Ascii7?
@@ -47,22 +46,19 @@ class FF_analyzeCommand:
         self.command = ""                                   # Command
         self.commandValue = 0                               # Command value in numeric format
         self.commandValueText = ""                          # Command value in text format
-        self.deviceName = ""                                # Device name
+        self.deviceAndClass = ""                            # Device with class name
+        self.deviceName = ""                                # Device with class name (for compatibility)
         self.deviceId = 0                                   # DeviceId
         self.deviceIdName = ""                              # Name of deviceId
-        self.deviceClass = ""                               # Device class to select in filterClass
-        self.valueToSetType = None                          # Value to set type
+        self.deviceClass = ""                               # Device class
+        self.valueToSetType = None                          # Value to set type ()
         self.valueToSet = None                              # Value to set
         self.valueToSetOriginal = None                      # Original value to set (for mapping)
         self.setBy = None                                   # Value to be set by 'user' or 'plugIn'
-
-    # Filter class to a given value
-    def filterClass(self, pair):
-        key, value = pair
-        classValue = key.split(" ")[0]
-        if classValue == self.deviceClass:
-            return True
-        return False
+        self.french = "French"                              # Language is French
+        self.english = "English"                            # Language is English
+        self.language = self.english                        # Force language to English
+        self.classAfterDevice = False                       # Is class after device (True for English like languages)
 
     # Prints an error message, saving it and setting error flag
     def printError(self, message):
@@ -78,12 +74,12 @@ class FF_analyzeCommand:
 
     # Load a dictionary to a file
     def loadDictionary(self, file):
-        # Print dupplicates on dictionnary
+        # Print duplicates on dictionary
         def dict_print_duplicates(ordered_pairs):
             d = {}
             for k, v in ordered_pairs:
                 if k in d:
-                    print (F"Warning: You have duplicate definition of {k} in JSON declaration")
+                    print (F"Warning: You have duplicate definition of >{k}< in JSON declaration")
                     print (F"    {d[k]}")
                     print (F"    {v}")
                 d[k] = v
@@ -236,6 +232,32 @@ class FF_analyzeCommand:
         else:
             return matchingList[0]
 
+    # Lookup keyword in dictionary, stopping on first match
+    #   List can contain values with spaces. In this case, as many keywords as word count in list element are compared
+    def lookupInDict(self, keywords, startPtr, dict):
+        matchingList = []
+        # For each item in search list
+        for item in dict.keys():
+            # Split item using space as separator
+            itemParts = item.split(" ")
+            matchFound = True
+            # For each keyword in item
+            for ptr in range(0, len(itemParts)):
+                # Check that we're still within keyword count
+                if len(keywords) <= startPtr + ptr:
+                    # No, this is not correct
+                    matchFound = False
+                else:
+                    # Are the keyword chars same as item?
+                    if self.convertUserData(itemParts[ptr][:len(keywords[startPtr+ptr])]) != self.convertUserData(keywords[startPtr+ptr]):
+                        # No, this is not correct
+                        matchFound = False
+            # If we got a match
+            if matchFound:
+                # Return item
+                return item
+        return ""
+
     def loadData(self, fileName):
         # Load JSON file
         self.checkFile = pathlib.Path(fileName).name
@@ -243,33 +265,36 @@ class FF_analyzeCommand:
         decodeData = self.loadDictionary(fileName)
 
         if decodeData:
-            ### Checking "ignores"
+            ### Checking  decodeData (dict)
             if self.compareType("decodeData type", decodeData, "dict"):
+                ### Loading classAfterDevice (True for English like languages, where device name is before device type)
+                self.classAfterDevice = self.getValue2(decodeData, "settings", "classAfterDevice", False)
+                ### Checking "ignores": ["of", "the", ...]
                 self.checkPhase = "checking ignores"
-                # Extract all "ignores" list
                 self.ignoresList = self.getValue(decodeData,"ignores")
+                # Extract all "ignores" (list)
                 if self.compareType("self.ignoresList type", self.ignoresList, "list"):
                     pass
-
-            ### Checking "commandValues"
+            ### Checking "commandValues": {	"cdeOn":{"codeValue":1}, ...}
             self.checkPhase = "checking command values"
-            # Extract all "commandValues"
             self.commandValuesDict =  self.getValue(decodeData,"commandValues")
+            # Extract all "commandValues" (dict)
             if self.compareType("commandValuesDict type", self.commandValuesDict, "dict"):
                 # For each item in self.commandValuesDict
                 for key in self.commandValuesDict.keys():
                     # Key should not be in ignore list
                     if self.notInIgnoreList("key", key):
+                        # Check codeValue (dict)
                         codeValueItem = self.commandValuesDict[key]
                         if self.compareType("codeValueItem type", codeValueItem, "dict"):
-                            # Get the "codeValue"
+                            # Get the "codeValue" (int)
                             codeValue = self.getValue(codeValueItem, "codeValue")
                             if self.compareType("codeValue type", codeValue, "int", codeValueItem):
                                 pass
 
             ### Checking "commandClasses"
             self.checkPhase = "checking commandClasses"
-            # Extract all "commandClasses"
+            # Extract all "commandClasses": {"classOnOff":{"commandValue":["cdeOn","cdeOff","cdeShow"]}, ...}
             self.commandClassesDict =  self.getValue(decodeData,"commandClasses")
             if self.compareType("commandClass type", self.commandClassesDict, "dict"):
                 # For each item in self.commandClassesDict
@@ -288,7 +313,7 @@ class FF_analyzeCommand:
                                     if self.compareValue("commandValue", element , self.commandValuesDict, commandClass):
                                         pass
 
-            ### Checking "commands"
+            ### Checking "commands": {"turn":{"commandValue":"cdeSet"}, ...}
             self.checkPhase = "checking commands"
             # Extract all "commands" list
             self.commandsDict =  self.getValue(decodeData,"commands")
@@ -307,7 +332,7 @@ class FF_analyzeCommand:
                                 if self.compareValue("command commandValue", commandCommandValue , self.commandValuesDict, commandItem):
                                     pass
 
-            ### Checking "deviceClasses"
+            ### Checking "deviceClasses": {"boiler":{"commandClass":"classSet","setType":"level","mapping":{"off":0,"on":100}}, ...}
             self.checkPhase = "checking device classes"
             # Extract all "deviceClasses"
             self.deviceClassesDict =  self.getValue(decodeData,"deviceClasses")
@@ -398,8 +423,7 @@ class FF_analyzeCommand:
                                             if item != "commandClass":
                                                 self.printError(F"Can't understand {item} in {deviceClassItem} for {key}")
 
-
-            ### Checking "devices"
+            ### Checking "devices": {"south bedroom ac":{"index":19,"name":"South Bedroom A/C - Power"}, ...}
             self.checkPhase = "checking devices"
             # Extract all "devices"
             self.devicesDict =  self.getValue(decodeData,"devices")
@@ -408,8 +432,11 @@ class FF_analyzeCommand:
                 for key in self.devicesDict.keys():
                     deviceItem = self.devicesDict[key]
                     if self.compareType("deviceItem type", deviceItem, "dict"):
-                        # Extract deviceClass item
-                        self.deviceClass = key.split(" ")[0]
+                        # Extract deviceClass item (first or last item)
+                        if self.classAfterDevice:
+                            self.deviceClass = key.split(" ")[len(key.split(" "))-1]
+                        else:
+                            self.deviceClass = key.split(" ")[0]
                         if self.compareNotValue("device class", self.deviceClass, "", deviceItem):
                             # Check for deviceClass in known list of deviceClasses
                             if self.compareValue("device class value", self.deviceClass , self.deviceClassesDict, deviceItem):
@@ -421,12 +448,13 @@ class FF_analyzeCommand:
                             self.compareNotValue("device index", deviceIndex, "", deviceItem)
                             self.compareNotValue("device index", deviceIndex, 0, deviceItem)
                         # Extract each part of device name
-                        deviceName = key.split(" ")
-                        for element in deviceName:
+                        deviceAndClass = key.split(" ")
+                        for element in deviceAndClass:
                             # element should not be in ignore list
                             if self.notInIgnoreList("part of key", element, F"Key is : {key}"):
                                 pass
-
+        else:
+            self.printError(F"Can't load {fileName}")
         # Set final check status (first value is short error message, second one all detected errors)
         if self.errorSeen:
             return "Error detected, please check "+fileName+" file!", self.allMessages
@@ -441,7 +469,8 @@ class FF_analyzeCommand:
         self.command = ""                                   # Command
         self.commandValue = 0                               # Command value in numeric format
         self.commandValueText = ""                          # Command value in text format
-        self.deviceName = ""                                # Device name
+        self.deviceAndClass = ""                            # Device with class name
+        self.deviceName = ""                                # Device with class name (for compatibility)
         self.deviceId = 0                                   # DeviceId
         self.deviceIdName = ""                              # Name of deviceId
         self.deviceClass = ""                               # Device class to select in filterClass
@@ -476,139 +505,138 @@ class FF_analyzeCommand:
             # move index into keywords
             keywordIndex += len(self.command.split(" "))
             # Isolate deviceClass in second keyword
-            if len(keywords) < keywordIndex + 1:
-                self.printError("No device class given!")
-            else:
-                self.deviceClass = self.findInDict(keywords, keywordIndex, self.deviceClassesDict, "commandClass")
-                if self.deviceClass != "":
-                    ##printInfp(F"Device class is {self.deviceClass}")
-                    # Don't move index into keywords as devices also include deviceClass
-                    # keywordIndex += len(self.deviceClass.split(" "))
-                    if len(keywords) < keywordIndex + 2 :
-                        self.printError("No device given!")
+            #if len(keywords) < keywordIndex + 1:
+            #    self.printError("No device class given!")
+            #else:
+            # Does the full device name/device class exists?
+            self.deviceAndClass = self.findInDict(keywords, keywordIndex, self.devicesDict, "device")
+            self.deviceClass = ""
+            if self.deviceAndClass != "":
+                if self.classAfterDevice:
+                    localIndex = keywordIndex + len(self.deviceAndClass.split(" ")) - 1
+                    self.deviceClass = self.findInDict(keywords, localIndex, self.deviceClassesDict, "commandClass")
+                else:
+                    self.deviceClass = self.findInDict(keywords, keywordIndex, self.deviceClassesDict, "commandClass")
+            if self.deviceClass != "":
+                keywordIndex += len(self.deviceAndClass.split(" "))
+                ##printInfp(F"Device class is {self.deviceClass}")
+                # Get commandClass class
+                deviceCommandClass = self.getValue2(self.deviceClassesDict, self.deviceClass, "commandClass")
+                if not deviceCommandClass:
+                    self.printError(F"Can't find {self.deviceClass} command class...")
+                else:
+                    ##self.printInfo(F"{self.deviceClass} device class is {deviceCommandClass}")
+                    # Get deviceClass commandValue
+                    commandClassCommandValue = self.getValue2(self.commandClassesDict, deviceCommandClass, "commandValue")
+                    if not commandClassCommandValue:
+                        self.printError(F"Can't find {deviceCommandClass} device commandClass commandValue...")
                     else:
-                        # Get commandClass class
-                        deviceCommandClass = self.getValue2(self.deviceClassesDict, self.deviceClass, "commandClass")
-                        if not deviceCommandClass:
-                            self.printError(F"Can't find {self.deviceClass} command class...", deviceClass)
+                        ##self.printInfo(F"{deviceCommandClass} commandValue is {commandClassCommandValue}")
+                        # Get command commandValue
+                        commandCommandValue = self.getValue2(self.commandsDict, self.command, "commandValue")
+                        if not commandCommandValue:
+                            self.printError(F"Can't find {self.command} command commandValue...")
                         else:
-                            ##self.printInfo(F"{self.deviceClass} device class is {deviceCommandClass}")
-                            # Get deviceClass commandValue
-                            commandClassCommandValue = self.getValue2(self.commandClassesDict, deviceCommandClass, "commandValue")
-                            if not commandClassCommandValue:
-                                self.printError(F"Can't find {deviceCommandClass} device commandClass commandValue...")
+                            ##self.printInfo(F"{self.command} command is {commandCommandValue}")
+                            if commandCommandValue not in commandClassCommandValue:
+                                self.printError(F"Can't do command {self.command} on device class {self.deviceClass}")
                             else:
-                                ##self.printInfo(F"{deviceCommandClass} commandValue is {commandClassCommandValue}")
-                                # Get command commandValue
-                                commandCommandValue = self.getValue2(self.commandsDict, self.command, "commandValue")
-                                if not commandCommandValue:
-                                    self.printError(F"Can't find {self.command} command commandValue...")
-                                else:
-                                    ##self.printInfo(F"{self.command} command is {commandCommandValue}")
-                                    if commandCommandValue not in commandClassCommandValue:
-                                        self.printError(F"Can't do command {self.command} on device class {self.deviceClass}")
-                                    else:
-                                        restrictedDevicesDict = dict(filter(self.filterClass, self.devicesDict.items()))
-                                        self.deviceName = self.findInDict(keywords, keywordIndex, restrictedDevicesDict, "device")
-                                        if self.deviceName != "":
-                                            ##self.printInfo(F"Device is {self.deviceName}"")
-                                            # Compute next index
-                                            keywordIndex += len(self.deviceName.split(" "))
-                                            # Is command set enabled?
-                                            commandSet = self.getValue2(self.commandValuesDict, commandCommandValue, "set", False)
-                                            ##self.printInfo(F"{command} set is {commandSet}")
-                                            # Is this a set command?
-                                            if commandSet:
-                                                # Extract all remaining keywords in value to set
-                                                self.valueToSet = ""
-                                                for ptr in range(keywordIndex, len(keywords)):
-                                                    self.valueToSet += keywords[ptr]+ " "
-                                                self.valueToSet = self.valueToSet.strip()
-                                                ##self.printInfo(F"Value to set is {self.valueToSet}")
-                                                # Do we have a value to set?
-                                                if self.valueToSet != "":
-                                                    # Extract setType value
-                                                    self.valueToSetType = self.getValue2(self.deviceClassesDict, self.deviceClass, "setType")
-                                                    # Do we have mapping associated with class?
-                                                    deviceClassMap = self.getValue2(self.deviceClassesDict, self.deviceClass, "mapping")
-                                                    if deviceClassMap:
-                                                        # Substitute first val  ue to set to mapped value
-                                                        self.valueToSetOriginal = self.findInDict(keywords, keywordIndex, deviceClassMap, "mapping")
-                                                        if self.valueToSetOriginal != "":
-                                                            # Load remapped value
-                                                            self.valueToSet = self.getValue(deviceClassMap, self.valueToSetOriginal)
-                                                            keywordIndex += len(self.valueToSetOriginal)
-                                                            # Do we have remaining keywords?
-                                                            if keywordIndex + 1 < len(keywords):
-                                                                self.printError(F"Can't understand {keywords[keywordIndex:]} after {self.valueToSet}")
-                                                    # Do we have a list associated with class?
-                                                    deviceClasslist = self.getValue2(self.deviceClassesDict, self.deviceClass, "list")
-                                                    if deviceClasslist and self.compareValue("value", self.valueToSet, deviceClasslist, givenCommand):
-                                                        pass
-                                                    # Do we have a minValue or maxValue?
-                                                    deviceClassMinValue = self.getValue2(self.deviceClassesDict, self.deviceClass, "minValue", None)
-                                                    deviceClassMaxValue = self.getValue2(self.deviceClassesDict, self.deviceClass, "maxValue")
-                                                    # Set authorized data type(s) depending on setType
-                                                    if self.valueToSetType == 'level':
-                                                        try:
-                                                            dummy = int(self.valueToSet)
-                                                        except ValueError:
-                                                            self.printError(F"({self.valueToSet}) is not a valid number")
-                                                            return
-                                                        if deviceClassMinValue == None:
-                                                            deviceClassMinValue = 0
-                                                        if deviceClassMaxValue == None:
-                                                            deviceClassMaxValue = 100
-                                                        if dummy < int(deviceClassMinValue):
-                                                            self.printError(F"Given value ({dummy}) should not be less than {deviceClassMinValue}")
-                                                            return
-                                                        if dummy > int(deviceClassMaxValue):
-                                                            self.printError(F"Given value ({dummy}) should not be greater than {deviceClassMaxValue}")
-                                                            return
-                                                    elif self.valueToSetType == 'integer':
-                                                        try:
-                                                            dummy = int(self.valueToSet)
-                                                        except ValueError:
-                                                            self.printError(F"({self.valueToSet}) is not a valid number")
-                                                            return
-                                                        if deviceClassMinValue != None and dummy < int(deviceClassMinValue):
-                                                            self.printError(F"Given value ({dummy}) should not be less than {deviceClassMinValue}")
-                                                            return
-                                                        if deviceClassMaxValue != None and dummy > int(deviceClassMaxValue):
-                                                            self.printError(F"Given value ({dummy}) should not be greater than {deviceClassMaxValue}")
-                                                            return
-                                                    elif self.valueToSetType == 'float' or self.valueToSetType == 'setPoint':
-                                                        try:
-                                                            dummy = float(self.valueToSet)
-                                                        except ValueError:
-                                                            self.printError(F"({self.valueToSet}) is not a valid floating point")
-                                                            return
-                                                        if deviceClassMinValue != None and dummy < float(deviceClassMinValue):
-                                                            self.printError(F"Given value ({dummy}) should not be less than {deviceClassMinValue}")
-                                                            return
-                                                        if deviceClassMaxValue != None and dummy > float(deviceClassMaxValue):
-                                                            self.printError(F"Given value ({dummy}) should not be greater than {deviceClassMaxValue}")
-                                                            return
-                                                    else:
-                                                        if deviceClassMinValue != None and self.valueToSet < deviceClassMinValue:
-                                                            self.printError(F"Given value ({self.valueToSet}) should not be less than {deviceClassMinValue}")
-                                                            return
-                                                        if deviceClassMaxValue != None and self.valueToSet > deviceClassMaxValue:
-                                                            self.printError(F"Given value ({self.valueToSet}) should not be greater than {deviceClassMaxValue}")
-                                                            return
-                                                    # Load setBy
-                                                    deviceClassSetBy = self.getValue2(self.deviceClassesDict, self.deviceClass, "setBy", "plugIn")
-                                                else:
-                                                    self.printError("Value to set is missing")
+                                if self.deviceAndClass != "":
+                                    ##self.printInfo(F"Device is {self.deviceAndClass}"")
+                                    # Is command set enabled?
+                                    commandSet = self.getValue2(self.commandValuesDict, commandCommandValue, "set", False)
+                                    ##self.printInfo(F"{command} set is {commandSet}")
+                                    # Is this a set command?
+                                    if commandSet:
+                                        # Extract all remaining keywords in value to set
+                                        self.valueToSet = ""
+                                        for ptr in range(keywordIndex, len(keywords)):
+                                            self.valueToSet += keywords[ptr]+ " "
+                                        self.valueToSet = self.valueToSet.strip()
+                                        ##self.printInfo(F"Value to set is {self.valueToSet}")
+                                        # Do we have a value to set?
+                                        if self.valueToSet != "":
+                                            # Extract setType value
+                                            self.valueToSetType = self.getValue2(self.deviceClassesDict, self.deviceClass, "setType")
+                                            # Do we have mapping associated with class?
+                                            deviceClassMap = self.getValue2(self.deviceClassesDict, self.deviceClass, "mapping")
+                                            if deviceClassMap:
+                                                # Substitute first val  ue to set to mapped value
+                                                self.valueToSetOriginal = self.findInDict(keywords, keywordIndex, deviceClassMap, "mapping")
+                                                if self.valueToSetOriginal != "":
+                                                    # Load remapped value
+                                                    self.valueToSet = self.getValue(deviceClassMap, self.valueToSetOriginal)
+                                                    keywordIndex += len(self.valueToSetOriginal)
+                                                    # Do we have remaining keywords?
+                                                    if keywordIndex + 1 < len(keywords):
+                                                        self.printError(F"Can't understand {keywords[keywordIndex:]} after {self.valueToSet}")
+                                            # Do we have a list associated with class?
+                                            deviceClasslist = self.getValue2(self.deviceClassesDict, self.deviceClass, "list")
+                                            if deviceClasslist and self.compareValue("value", self.valueToSet, deviceClasslist, givenCommand):
+                                                pass
+                                            # Do we have a minValue or maxValue?
+                                            deviceClassMinValue = self.getValue2(self.deviceClassesDict, self.deviceClass, "minValue", None)
+                                            deviceClassMaxValue = self.getValue2(self.deviceClassesDict, self.deviceClass, "maxValue")
+                                            # Set authorized data type(s) depending on setType
+                                            if self.valueToSetType == 'level':
+                                                try:
+                                                    dummy = int(self.valueToSet)
+                                                except ValueError:
+                                                    self.printError(F"({self.valueToSet}) is not a valid number")
+                                                    return
+                                                if deviceClassMinValue == None:
+                                                    deviceClassMinValue = 0
+                                                if deviceClassMaxValue == None:
+                                                    deviceClassMaxValue = 100
+                                                if dummy < int(deviceClassMinValue):
+                                                    self.printError(F"Given value ({dummy}) should not be less than {deviceClassMinValue}")
+                                                    return
+                                                if dummy > int(deviceClassMaxValue):
+                                                    self.printError(F"Given value ({dummy}) should not be greater than {deviceClassMaxValue}")
+                                                    return
+                                            elif self.valueToSetType == 'integer':
+                                                try:
+                                                    dummy = int(self.valueToSet)
+                                                except ValueError:
+                                                    self.printError(F"({self.valueToSet}) is not a valid number")
+                                                    return
+                                                if deviceClassMinValue != None and dummy < int(deviceClassMinValue):
+                                                    self.printError(F"Given value ({dummy}) should not be less than {deviceClassMinValue}")
+                                                    return
+                                                if deviceClassMaxValue != None and dummy > int(deviceClassMaxValue):
+                                                    self.printError(F"Given value ({dummy}) should not be greater than {deviceClassMaxValue}")
+                                                    return
+                                            elif self.valueToSetType == 'float' or self.valueToSetType == 'setPoint':
+                                                try:
+                                                    dummy = float(self.valueToSet)
+                                                except ValueError:
+                                                    self.printError(F"({self.valueToSet}) is not a valid floating point")
+                                                    return
+                                                if deviceClassMinValue != None and dummy < float(deviceClassMinValue):
+                                                    self.printError(F"Given value ({dummy}) should not be less than {deviceClassMinValue}")
+                                                    return
+                                                if deviceClassMaxValue != None and dummy > float(deviceClassMaxValue):
+                                                    self.printError(F"Given value ({dummy}) should not be greater than {deviceClassMaxValue}")
+                                                    return
                                             else:
-                                                # Do we have an available keyword?
-                                                if keywordIndex < len(keywords):
-                                                    self.printError(F"Can't understand {keywords[keywordIndex:]} after {self.deviceName}")
-                                                deviceClassSetBy = ""
-                                            if not self.errorSeen:
-                                                self.deviceId = self.getValue2(self.devicesDict,self.deviceName, "index")
-                                                self.deviceIdName = self.getValue2(self.devicesDict, self.deviceName, "name")
-                                                self.commandValue = self.getValue2(self.commandValuesDict,commandCommandValue, "codeValue")
-                                                self.commandValueText = commandCommandValue
-                                                self.setBy = deviceClassSetBy
+                                                if deviceClassMinValue != None and self.valueToSet < deviceClassMinValue:
+                                                    self.printError(F"Given value ({self.valueToSet}) should not be less than {deviceClassMinValue}")
+                                                    return
+                                                if deviceClassMaxValue != None and self.valueToSet > deviceClassMaxValue:
+                                                    self.printError(F"Given value ({self.valueToSet}) should not be greater than {deviceClassMaxValue}")
+                                                    return
+                                            # Load setBy
+                                            self.setBy = self.getValue2(self.deviceClassesDict, self.deviceClass, "setBy", "plugIn")
+                                        else:
+                                            self.printError("Value to set is missing")
+                                    else:
+                                        # Do we have an available keyword?
+                                        if keywordIndex < len(keywords):
+                                            self.printError(F"Can't understand {keywords[keywordIndex:]} after {self.deviceAndClass}")
+                                    if not self.errorSeen:
+                                        self.deviceName = self.deviceAndClass
+                                        self.deviceId = self.getValue2(self.devicesDict,self.deviceAndClass, "index")
+                                        self.deviceIdName = self.getValue2(self.devicesDict, self.deviceAndClass, "name")
+                                        self.commandValue = self.getValue2(self.commandValuesDict,commandCommandValue, "codeValue")
+                                        self.commandValueText = commandCommandValue
         return self.firstErrorMessage, self.allMessages

@@ -27,17 +27,21 @@ if errorText:
 
 with open('config.txt', 'wt') as outFile:
     for device in analyzer.devicesDict.keys():
+        if analyzer.classAfterDevice:
+            deviceClass = device.split(' ')[len(device.split(" "))-1]
+        else:
+            deviceClass = device.split(' ')[0]
         deviceName = analyzer.getValue2(analyzer.devicesDict, device, 'name')
-        deviceClass = analyzer.getValue2(analyzer.deviceClassesDict, device.split(' ')[0], "deviceClass")
-        deviceClassMappings = analyzer.getValue2(analyzer.mappingsDict, deviceClass, 'mapping')
-        deviceValues = analyzer.getValue2(analyzer.deviceClassesDict, device.split(' ')[0], "values")
+        deviceCommandClass = analyzer.getValue2(analyzer.deviceClassesDict, deviceClass, 'commandClass')
+        deviceCommandClasses = analyzer.getValue2(analyzer.commandClassesDict, deviceCommandClass, 'commandValue')
+        deviceClassMappings = analyzer.getValue2(analyzer.deviceClassesDict, deviceClass, "mapping")
         deviceCommands = ""
         for command in analyzer.commandsDict:
-            if analyzer.getValue2(analyzer.commandsDict, command, 'command') in deviceClassMappings:
+            if analyzer.getValue2(analyzer.commandsDict, command, 'commandValue') in deviceCommandClasses:
                 deviceCommands += "/" + command
         setValues = ""
-        if deviceValues:
-            for value in deviceValues.keys():
+        if deviceClassMappings:
+            for value in deviceClassMappings.keys():
                 setValues += "/" + value
             setValues = " [" + setValues[1:] + "]"
         outFile.write(deviceName+"\t"+deviceCommands[1:]+" "+device+setValues+"\n")

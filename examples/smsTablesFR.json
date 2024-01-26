@@ -1,0 +1,60 @@
+{
+	"settings": {
+		"classAfterDevice": false
+	},
+	"ignores": [
+		"de",
+		"du",
+		"des",
+		"d'",
+		"le",
+		"la",
+		"les",
+		"l'",
+		"à",
+		"a",
+		"=",
+		"sur"
+	],
+	"commandValues": {
+		"cdeOn":{"codeValue":1},
+		"cdeOff":{"codeValue":2},
+		"cdeShow":{"codeValue":4},
+		"cdeSet":{"codeValue":8,"set":true}
+	},
+	"commandClasses": {
+		"classOnOff":{"commandValue":["cdeOn","cdeOff","cdeShow"]},
+		"classSet":{"commandValue":["cdeSet","cdeShow"]},
+		"classShow":{"commandValue":["cdeShow"]}
+	},
+	"commands": {
+		"allume":{"commandValue":"cdeOn"},
+		"arme":{"commandValue":"cdeOn"},
+		"ouvre":{"commandValue":"cdeOn"},
+		"éteins":{"commandValue":"cdeOff"},
+		"désarme":{"commandValue":"cdeOff"},
+		"ferme":{"commandValue":"cdeOff"},
+		"état":{"commandValue":"cdeShow"},
+		"affiche":{"commandValue":"cdeShow"},
+		"règle":{"commandValue":"cdeSet"},
+		"définis":{"commandValue":"cdeSet"}
+	},
+	"deviceClasses": {
+		"chaleur":{"commandClass":"classSet","setType":"level","mapping":{"chaud":10,"froid":20,"déshumidification":30}},
+		"clim":{"commandClass":"classOnOff"},
+		"consigne":{"commandClass":"classSet","setType":"setPoint","minValue":6,"maxValue":25},
+		"contact":{"commandClass":"classShow"},
+		"lampe":{"commandClass":"classOnOff"},
+		"radiateur":{"commandClass":"classSet","setType":"level","mapping":{"off":0,"confort":10,"eco":40,"horsgel":50}},
+		"température":{"commandClass":"classShow"}
+	},
+	"devices": {
+		"clim chambre sud":{"index":12,"name":"Clim chambre Sud - Power"},
+		"chaleur chambre sud":{"index":23,"name":"Clim chambre Sud - Mode"},
+		"consigne chambre sud":{"index":34,"name":"Clim chambre Sud - Thermostat"},
+		"lampe cuisine":{"index":45,"name":"Cuisine"},
+		"température sejour":{"index":56,"name":"Température air séjour"},
+		"radiateur SdB nord":{"index":67,"name":"Mode radiateur SdB nord"},
+		"contact porte entrée":{"index":78,"name":"Contact porte entrée"}
+	}
+}
