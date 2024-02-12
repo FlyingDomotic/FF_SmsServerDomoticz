@@ -9,7 +9,7 @@ Execute des commandes envoyées par SMS à Domoticz
 
 This python code reads all SMS received by a (FF) SMS server. If first command's word is equal to a given prefix, rest of command is analyzed as a valid command. Errors during analysis are returned as SMS to command's sender. If no errors, command is sent to Domoticz and result sent back to sender, still by SMS.
 
-Ce code python lit les SMS reçus par un serveur (FF) SMS. Si le premier mot de la commande est égal à un prefixe donné, le reste de la commande est analysée. Les erreurs sont renvoyées à l'expéditeur par SMS. Si la commande est ccorecte, elle est envoyée à Domoticz, et le résultat est retourné à l'expéditeur, toujours par SMS.
+Ce code python lit les SMS reçus par un serveur (FF) SMS. Si le premier mot de la commande est égal à un préfixe donné, le reste de la commande est analysée. Les erreurs sont renvoyées à l'expéditeur par SMS. Si la commande est ccorecte, elle est envoyée à Domoticz, et le résultat est retourné à l'expéditeur, toujours par SMS.
 
 ## Note
 There are 2 versions of this code:
@@ -22,7 +22,7 @@ Il y a 2 versions de ce code :
 - https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git (ce code), implémenté sous forme de service Linux
 - https://github.com/FlyingDomotic/domoticz-ff_smsserver-plugin.git, qui tourne en tant que plugin Domoticz
 
-Chosissez la version qui vous va le mieux.
+Choisissez la version qui vous va le mieux.
 
 ## Prerequisites/Prérequis
 
@@ -67,7 +67,7 @@ cd [là_où_vous_avez_installé_FF_SmsServerDomoticz]
 git pull
 ```
 
-Note: si vous avez modifié des fichiers et que la commande `git pull` ne fonctionne pas, vous pouvez anuler les changements par :
+Note: si vous avez modifié des fichiers et que la commande `git pull` ne fonctionne pas, vous pouvez annuler les changements par :
 ```
 git stash
 ```
@@ -84,7 +84,7 @@ For example: "domoticz turn kitchen light on", "domoticz open living room shutte
 
 Code allows to work with UTF-8 data. You may optionally restrict comparison and/or output to 7 bits ASCII equivalent to help processing, allowing to remove accentuated characters (even if useful for 
 
-La structure de la commande est : [command] [device type] [device name] [value to set].
+La structure de la commande est : [préfixe] [command] [device type] [device name] [value to set].
 
 Par exemple : `domotique allume la lampe de la cuisine`, `domotique ouvre le volet du salon`, `domotique règle la consigne de la clim du séjour sur 21`, ...
 
@@ -201,6 +201,14 @@ Voici un exemple de fichier smsTables.json (version française) :
 ```
 {
 	"settings": {
+		"smsServerReceiveTopic": "smsServer/received",
+		"smsServerSendTopic": "smsServer/toSend",
+		"smsServerLwtTopic": "smsServer/LWT",
+		"smsServerPrefix": "test",
+		"domoticzInTopic": "domoticz/in",
+		"domoticzOutTopic": "domoticz/out",
+		"domoticzAddress": "127.0.0.1",
+		"domoticzPort": "8080",
 		"classAfterDevice": false
 	},
 	"ignores": [
