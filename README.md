@@ -1,15 +1,12 @@
 # FF_SmsServer interface to Domoticz/Interface FF_SmsServer pour Domoticz
-(English and French version in same file/Versions anglaises et françaises dans le même fichier)
+
+[Cliquez ici pour la version française plus bas dans ce document](#france)
 
 Allow users to send SMS containing commands to be executer on Domoticz.
 
-Execute des commandes envoyées par SMS à Domoticz
-
-## What's for?/A quoi ça sert ?
+## What's for?
 
 This python code reads all SMS received by a (FF) SMS server. If first command's word is equal to a given prefix, rest of command is analyzed as a valid command. Errors during analysis are returned as SMS to command's sender. If no errors, command is sent to Domoticz and result sent back to sender, still by SMS.
-
-Ce code python lit les SMS reçus par un serveur (FF) SMS. Si le premier mot de la commande est égal à un préfixe donné, le reste de la commande est analysée. Les erreurs sont renvoyées à l'expéditeur par SMS. Si la commande est ccorecte, elle est envoyée à Domoticz, et le résultat est retourné à l'expéditeur, toujours par SMS.
 
 ## Note
 There are 2 versions of this code:
@@ -18,17 +15,9 @@ There are 2 versions of this code:
 
 You may choose version best suited for you.
 
-Il y a 2 versions de ce code :
-- https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git (ce code), implémenté sous forme de service Linux, avec de nombreux paramètres de configuration, incluant des classes de dispositifs,
-- https://github.com/FlyingDomotic/domoticz-ff_smsserver-plugin.git, qui tourne en tant que plugin Domoticz, avec un fichier de configuration simple, généré un script python directement depuis la base de dispositifs Domoticz.
+## Prerequisites
 
-Choisissez la version qui vous va le mieux.
-
-## Prerequisites/Prérequis
-
-You must have a (FF) SMS server (https://github.com/FlyingDomotic/FF_SmsServer.git) properly configured and running somewhere on your network.
-
-Vous devez avoir un serveur (FF) SMS (https://github.com/FlyingDomotic/FF_SmsServer.git) correctement configuré et tournant quelque part dans votre réseau.
+You must have a (FF) SMS server (https://github.com/FlyingDomotic/FF_SmsServer.git or https://github.com/FlyingDomotic/FF_SmsServer32.git) properly configured and running somewhere on your network.
 
 ## Installation
 
@@ -38,13 +27,7 @@ cd [where_you_want_to_install_it]
 git clone https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git FF_SmsServerDomoticz
 ```
 
-Clonez le code quelque part sur votre disque.
-```
-cd [là_ou_vous_voulez_l'installer]
-git clone https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git FF_SmsServerDomoticz
-```
-
-## Update/Mise à jour
+## Update
 
 Go to code folder and pull new version:
 ```
@@ -61,22 +44,7 @@ or
 git checkout [modified file]
 ```
 
-Allez dans le répertoire où vous avez installé le code et mettez-le à jour :
-```
-cd [là_où_vous_avez_installé_FF_SmsServerDomoticz]
-git pull
-```
-
-Note: si vous avez modifié des fichiers et que la commande `git pull` ne fonctionne pas, vous pouvez annuler les changements par :
-```
-git stash
-```
-ou
-```
-git checkout [fichier modifié]
-```
-
-## Principle/Principe
+## Principle
 
 General command organization is: [prefix] [command] [device name] [device type] [value to set].
 
@@ -84,13 +52,7 @@ For example: "domoticz turn kitchen light on", "domoticz open living room shutte
 
 Code allows to work with UTF-8 data. You may optionally restrict comparison and/or output to 7 bits ASCII equivalent to help processing, allowing to remove accentuated characters (even if useful for 
 
-La structure de la commande est : [préfixe] [command] [device type] [device name] [value to set].
-
-Par exemple : `domotique allume la lampe de la cuisine`, `domotique ouvre le volet du salon`, `domotique règle la consigne de la clim du séjour sur 21`, ...
-
-Le code utilise du texte codé en UTF-8. Vous pouvez restreindre la comparaison et/ou l'affichage en mode 7 bits ASCII, ce qui éliminera les caractères accentués.
-
-## Files/Fichiers
+## Files
 - smsTables.json: configuration file describing devices, classes and commands.
 - FF_analyzeCommand.py: contains common code used to parse smsTables.json, and parse SMS commands against them.
 - checkJsonFiles.py: check syntax and relationships of smsTables.json and allows you to test legality of commands (without executing them).
@@ -98,14 +60,7 @@ Le code utilise du texte codé en UTF-8. Vous pouvez restreindre la comparaison 
 - domoticzSms.py: reads SMS message, check for prefix, parse command and execute it if legal.
 - domoticsSsm.service: service configuration file to run domoticzSms.py as service.
 
-- smsTables.json: fichier de configuration décrivant les dispositifs, classes et commandes.
-- FF_analyzeCommand.py: contient le code utilisé pour lire smsTables.json, et vérifier/décoder les commandes SMS.
-- checkJsonFiles.py: vérifie la syntaxe et les relations du fichier smsTables.json. Permet aussi de vérifier le format des commandes (sans les exécuter).
-- makeDoc.py: génére une liste des commandes supportées par votre configuration.
-- domoticzSms.py: lit les SMS, vérifie le préfixe, analyse la commande et l'exécute si elle est correcte.
-- domoticsSsm.service: fichier de configuration pour lancer domoticzSms.py en tant que service.
-
-## smsTables.json content/Contenu du fichier smsTables.json
+## smsTables.json content
 
 This json configuration file contains the following parts (in any order):
 
@@ -178,6 +133,98 @@ Here's an example of smsTables.json (English version):
 	}
 }
 ```
+
+## How to get list of commands supported by your implementation?
+
+Just run `makeDoc.py` and have a look at `config.txt` it'll generate. Here's an example of the configuration listed in the previous paragraph. First column is Domoticz device name while second one list all commands available for the device:
+```
+South bedroom air conditioning - Power	arm/open/disarm/close/state/display south bedroom ac
+South bedroom air conditioning - Mode	turn/state/display/set/define south bedroom heating [warm/cold/dehumidification]
+South bedroom air conditioning - SetPoint	turn/state/display/set/define south bedroom reference
+Kitchen	turn/state/display/set/define kitchen light [off/on]
+Living temperature	state/display living room temperature
+North bedroom radiator mode	turn/state/display/set/define north bathroom radiator [off/comfort/eco/nofrost]
+Main door contact	state/display main door contact
+```
+
+## How to install domoticzSms.service?
+- cd [where you installed FF_SmsServerDomoticz]
+- chmod +x *.py
+- nano domoticzSms.service
+	- locate `User=` line and replace `pi` by user you want to run domoticzSms.service (if not `pi`)
+	- locate `ExecStart=` line and replace `/home/pi` by location where you installed domoticzSms.service
+	- save modified file
+- sudo mv domoticzSms.service /lib/systemd/system/
+- sudo chmod 644 /lib/systemd/system/domoticzSms.service
+- sudo systemctl enable domoticzSms.service
+- sudo systemctl start domoticzSms.service
+
+------------------------------------------------
+
+# <a id="france">Version française</a>
+
+
+Execute des commandes envoyées par SMS à Domoticz
+
+## A quoi ça sert ?
+
+Ce code python lit les SMS reçus par un serveur (FF) SMS. Si le premier mot de la commande est égal à un préfixe donné, le reste de la commande est analysée. Les erreurs sont renvoyées à l'expéditeur par SMS. Si la commande est correcte, elle est envoyée à Domoticz, et le résultat est retourné à l'expéditeur, toujours par SMS.
+
+## Note
+
+Il y a 2 versions de ce code :
+- https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git (ce code), implémenté sous forme de service Linux, avec de nombreux paramètres de configuration, incluant des classes de dispositifs,
+- https://github.com/FlyingDomotic/domoticz-ff_smsserver-plugin.git, qui tourne en tant que plugin Domoticz, avec un fichier de configuration simple, généré un script python directement depuis la base de dispositifs Domoticz.
+
+Choisissez la version qui vous va le mieux.
+
+## Prerequisites/Prérequis
+
+Vous devez avoir un serveur (FF) SMS (https://github.com/FlyingDomotic/FF_SmsServer.git or https://github.com/FlyingDomotic/FF_SmsServer32.git) correctement configuré et tournant quelque part dans votre réseau.
+
+## Installation
+
+Clonez le code quelque part sur votre disque.
+```
+cd [là_ou_vous_voulez_l'installer]
+git clone https://github.com/FlyingDomotic/FF_SmsServerDomoticz.git FF_SmsServerDomoticz
+```
+
+## Update/Mise à jour
+
+Allez dans le répertoire où vous avez installé le code et mettez-le à jour :
+```
+cd [là_où_vous_avez_installé_FF_SmsServerDomoticz]
+git pull
+```
+
+Note: si vous avez modifié des fichiers et que la commande `git pull` ne fonctionne pas, vous pouvez annuler les changements par :
+```
+git stash
+```
+ou
+```
+git checkout [fichier modifié]
+```
+
+## Principe
+
+La structure de la commande est : [préfixe] [command] [device type] [device name] [value to set].
+
+Par exemple : `domotique allume la lampe de la cuisine`, `domotique ouvre le volet du salon`, `domotique règle la consigne de la clim du séjour sur 21`, ...
+
+Le code utilise du texte codé en UTF-8. Vous pouvez restreindre la comparaison et/ou l'affichage en mode 7 bits ASCII, ce qui éliminera les caractères accentués.
+
+## Fichiers
+
+- smsTables.json: fichier de configuration décrivant les dispositifs, classes et commandes.
+- FF_analyzeCommand.py: contient le code utilisé pour lire smsTables.json, et vérifier/décoder les commandes SMS.
+- checkJsonFiles.py: vérifie la syntaxe et les relations du fichier smsTables.json. Permet aussi de vérifier le format des commandes (sans les exécuter).
+- makeDoc.py: génére une liste des commandes supportées par votre configuration.
+- domoticzSms.py: lit les SMS, vérifie le préfixe, analyse la commande et l'exécute si elle est correcte.
+- domoticsSsm.service: fichier de configuration pour lancer domoticzSms.py en tant que service.
+
+## Contenu du fichier smsTables.json
 
 Le fichier de configuration json contient les éléments suivants (dans n'importe quel ordre) :
 
@@ -269,18 +316,8 @@ Voici un exemple de fichier smsTables.json (version française) :
 }
 ```
 
-## How to get list of commands supported by your implementation?/Comment obtenir une liste des commandes ?
+## Comment obtenir une liste des commandes ?
 
-Just run `makeDoc.py` and have a look at `config.txt` it'll generate. Here's an example of the configuration listed in the previous paragraph. First column is Domoticz device name while second one list all commands available for the device:
-```
-South bedroom air conditioning - Power	arm/open/disarm/close/state/display south bedroom ac
-South bedroom air conditioning - Mode	turn/state/display/set/define south bedroom heating [warm/cold/dehumidification]
-South bedroom air conditioning - SetPoint	turn/state/display/set/define south bedroom reference
-Kitchen	turn/state/display/set/define kitchen light [off/on]
-Living temperature	state/display living room temperature
-North bedroom radiator mode	turn/state/display/set/define north bathroom radiator [off/comfort/eco/nofrost]
-Main door contact	state/display main door contact
-```
 Lancer simplement `makeDoc.py` pour générer un fichier `config.txt`. Voici un exemple à partir de la configuration donnée dans le paragraphe précédent. La première colonne indique le nom du dispositif Domoticz, la seconde la liste de toutes les commandes disponibles pour le dispositif :
 
 ```
@@ -293,17 +330,7 @@ Mode radiateur SdB nord	état/affiche/règle/définis radiateur SdB nord [off/co
 Contact porte entrée	état/affiche contact porte entrée
 ```
 
-## How to install domoticzSms.service?/Comment installer le service domoticzSms?
-- cd [where you installed FF_SmsServerDomoticz]
-- chmod +x *.py
-- nano domoticzSms.service
-	- locate `User=` line and replace `pi` by user you want to run domoticzSms.service (if not `pi`)
-	- locate `ExecStart=` line and replace `/home/pi` by location where you installed domoticzSms.service
-	- save modified file
-- sudo mv domoticzSms.service /lib/systemd/system/
-- sudo chmod 644 /lib/systemd/system/domoticzSms.service
-- sudo systemctl enable domoticzSms.service
-- sudo systemctl start domoticzSms.service
+## Comment installer le service domoticzSms?
 
 - cd [là où vous avez installé FF_SmsServerDomoticz]
 - chmod +x *.py
